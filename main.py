@@ -106,9 +106,14 @@ def uncertain_phrase_detection(lexicon_keys):
 	test_private_index_array = tagged_indexes(all_test_private_words_list)
 	test_public_index_ranges = index_ranges(test_public_index_array)
 	test_private_index_ranges = index_ranges(test_private_index_array)
-	print('Type, Spans')
-	print('CUE-public, ' + test_public_index_ranges)
-	print('CUE-private, ' + test_private_index_ranges)
+	write_to_csv(test_public_index_ranges, test_private_index_ranges)
+
+def write_to_csv(test_public_index_ranges, test_private_index_ranges):
+	with open('kaggle1.csv', 'w', newline='') as csvfile:
+		csvwriter = csv.writer(csvfile, delimiter=',', quotechar=' ', quoting=csv.QUOTE_MINIMAL)
+		csvwriter.writerow(['Type', 'Spans'])
+		csvwriter.writerow(['CUE-public', test_public_index_ranges])
+		csvwriter.writerow(['CUE-private', test_private_index_ranges])
 
 if __name__ == '__main__':
 	all_words_list = grab_files()

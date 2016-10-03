@@ -65,6 +65,7 @@ def tagged_indexes (all_test_words_list):
 	indexes = []
 	count = 0
 	for words_in_file in all_test_words_list:
+		print(words_in_file)
 		if (len(words_in_file) > 1):
 			if (cue in words_in_file[2]):
 				token_array.append(True)
@@ -110,7 +111,63 @@ def uncertain_phrase_detection(lexicon_keys):
 	print('CUE-public, ' + test_public_index_ranges)
 	print('CUE-private, ' + test_private_index_ranges)
 
+
+def is_sentence_uncertain(sentence):
+	threshold = 0.3
+	cue_count = 0.0
+	sentence_length = float(len(sentence))
+	for token in sentence:
+		if token[2] == "CUE":
+			cue_count += 1.0
+	return (cue_count / sentence_length) >= threshold
+
+
+
+def check_sentences(all_test_words_list):
+	sentence_tags = []
+	sentence_group = []
+	sentence_id = 0
+	for words_tags in all_test_words_list:
+		if words_tags[0] == '' and len(sentence_group) != 0:
+			uncertain = is_sentence_uncertain(sentence_group)
+			if uncertain:
+				sentence_tags.append(sentence_id)
+			sentence_group = []
+			sentence_id += 1
+		else:
+			if words_tags[0] != '':
+				sentence_group.append(words_tags)
+
+	return sentence_tags
+
+def uncertain_sentence_detection(lexicon_keys):
+	test_public_path = "nlp_project2_uncertainty\\nlp_project2_uncertainty\\test-public"
+	test_private_path = "nlp_project2_uncertainty\\nlp_project2_uncertainty\\test-private"
+	all_test_public_words_list = grab_test_files(lexicon_keys, test_public_path)
+	all_test_private_words_list = grab_test_files(lexicon_keys, test_private_path)
+
+	public_tags = check_sentences(all_test_public_words_list)
+	private_tags = check_sentences(all_test_private_words_list)
+
+	output_kaggle_2_csv([public_tags, private_tags])
+
+def output_kaggle_2_csv(tags):
+	#tags is an array of the public (first element) and private (second) tag arrays
+	space_tags = []
+	for tag_types in tags:
+		space_tags.append(' '.join(str(x) for x in tag_types))
+
+	with open("kaggle2.csv", "w") as csvfile:
+		file_writer = csv.writer(csvfile, delimiter=',', lineterminator='\n')
+
+		file_writer.writerow(["Type", "Indices"])
+		file_writer.writerow(["SENTENCE-public"] + [space_tags[0]])
+		file_writer.writerow(["SENTENCE-private"] + [space_tags[1]])
+	print("DONE -- output in kaggle2.csv")
+
+
 if __name__ == '__main__':
 	all_words_list = grab_files()
 	lexicon, lexicon_keys = build_lexicon(all_words_list)
-	uncertain_phrase_detection(lexicon_keys)
+	# uncertain_phrase_detection(lexicon_keys)
+	# uncertain_sentence_detection(lexicon_keys)

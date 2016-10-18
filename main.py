@@ -170,9 +170,33 @@ def output_kaggle_2_csv(tags):
 		file_writer.writerow(["SENTENCE-private"] + [space_tags[1]])
 	print("DONE -- output in kaggle2.csv")
 
+def cue_to_bio_training (all_words_list):
+	prev_tagged = False
+	cue = "CUE"
+	prev_cue = ""
+
+	for line in all_words_list:
+		if (len(line) == 3):
+			if not (cue in line[2]):
+				prev_cue = line[2]
+				line[2] = "O"
+				prev_tagged = False
+			elif not (prev_tagged) and (cue in line[2]):
+				prev_cue = line[2]
+				line[2] = "B"
+				prev_tagged = True
+			elif (prev_tagged) and (line[2] in prev_cue):
+				prev_cue = line[2]
+				line[2] = "I"
+			elif (prev_tagged) and not (line[2] in prev_cue):
+				prev_cue = line[2]
+				line[2] = "B"
+	return all_words_list
 
 if __name__ == '__main__':
 	all_words_list = grab_files()
 	lexicon, lexicon_keys = build_lexicon(all_words_list)
+	all_words_list_BIO = cue_to_bio_training(all_words_list)
+
 	# uncertain_phrase_detection(lexicon_keys)
 	# uncertain_sentence_detection(lexicon_keys)

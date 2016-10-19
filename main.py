@@ -2,6 +2,7 @@
 import os
 import csv
 import copy
+import operator
 
 def read_file (path, file):
 	file_words = []
@@ -280,11 +281,50 @@ def calc_bigram_probs (bigram_counts, token_array):
             bigram_probs[key][following_word] = bigram_prob
     return bigram_probs
 
+
+PROB_PRIOR = 0.5
+
+def viterbi(bio_bigram_probs, bio_probs, words):
+	tags = ["B", "I", "O"]
+	c = 3
+	score = {}
+	bptr = {}
+	#Init
+	for i in range(c):
+		score[i] = {0 : (PROB_PRIOR * bio_probs[words[0]][tags[i]])}
+		bptr[i] = {0 : 0}
+	#Iteration
+	for t in range(1,len(words)):
+		for i in range(c):
+			values = []
+			for j in range(c):
+				values.append(score[j,(t-1)] * bio_bigram_probs[tags[j]][tags[i]])
+			idx, value = max(enumerate(values), key=operator.itemgetter(1))
+			score[i][t] = value * bio_probs[words[t]][tags[i]]
+			bptr[i][t] = idx
+	#Identify
+	T = {}
+	n = len(words)
+	max_i_n = -1
+	max_i = -1
+	for i in range(c):
+		if score[i][n-1] > max_i_n:
+			max_i_n = score[i][n-1]
+			max_i = i
+
+	T[n-1] = max_i
+	for i in reversed(range(0, n-1)):
+		T[i] = bptr[T[i+1]][i+1]
+	print(T)
+
+def run_viterbi():
+	
+
 if __name__ == '__main__':
 	all_words_list = grab_files()
 	lexicon, lexicon_keys = build_lexicon(all_words_list)
 	all_words_list_BIO = cue_to_bio_training(all_words_list)
-	
+
 	bio_counts = count_word_tag_pairs(all_words_list_BIO)
 	bio_probs = calc_probs_word_tags(bio_counts)
 

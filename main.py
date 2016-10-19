@@ -299,16 +299,24 @@ def viterbi(bio_bigram_probs, bio_probs, words):
 	bptr = {}
 	#Init
 	for i in range(c):
-		score[i] = {0 : (PROB_PRIOR * bio_probs[words[0]][tags[i]])}
+		try:
+			bio_prob = bio_probs[words[0]][tags[i]]
+		except KeyError:
+			bio_prob = 0
+		score[i] = {0 : (PROB_PRIOR * bio_prob)}
 		bptr[i] = {0 : 0}
 	#Iteration
 	for t in range(1,len(words)):
 		for i in range(c):
 			values = []
 			for j in range(c):
-				values.append(score[j,(t-1)] * bio_bigram_probs[tags[j]][tags[i]])
+				values.append(score[j][(t-1)] * bio_bigram_probs[tags[j]][tags[i]])
 			idx, value = max(enumerate(values), key=operator.itemgetter(1))
-			score[i][t] = value * bio_probs[words[t]][tags[i]]
+			try:
+				word_bio_prob = bio_probs[words[t]][tags[i]]
+			except KeyError:
+				word_bio_prob = 0
+			score[i][t] = value * word_bio_prob
 			bptr[i][t] = idx
 	#Identify
 	T = {}
@@ -325,8 +333,21 @@ def viterbi(bio_bigram_probs, bio_probs, words):
 		T[i] = bptr[T[i+1]][i+1]
 	print(T)
 
-def run_viterbi():
-	
+def run_viterbi(path, bigram_probs, bio_probs):
+	all_words_list = grab_files(path)
+	print(bigram_probs)
+	words = []
+	for line in all_words_list:
+		words.append(line[0])
+	#For testing, get first sentence only
+	sentence = []
+	for w in words:
+		if w == '':
+			break
+		else:
+			sentence.append(w)
+	viterbi(bigram_probs, bio_probs, sentence)
+
 
 if __name__ == '__main__':
 	train_path = "nlp_project2_uncertainty\\nlp_project2_uncertainty\\train"
@@ -346,8 +367,7 @@ if __name__ == '__main__':
 	BIO_bigram_counts = calc_bigram_counts(all_BIO_list)
 	BIO_bigram_probs = calc_bigram_probs(BIO_bigram_counts, all_BIO_list)
 
-	print(BIO_bigram_probs)
-
+	run_viterbi(public_path, BIO_bigram_probs, bio_probs)
 	#for key in BIO_bigram_probs:
 	#	_sum = 0
 	#	for _key, value in BIO_bigram_probs[key].items():

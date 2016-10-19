@@ -345,6 +345,18 @@ def run_viterbi(path, bigram_probs, bio_probs):
 			sentence.append(w)
 	viterbi(bigram_probs, bio_probs, sentence)
 
+def add_zeroes_to_bigram_prob (bigram_probs):
+	possible_keys = []
+	for key in bigram_probs:
+		if not (key in possible_keys):
+			possible_keys.append(key)
+	for key in bigram_probs:
+		possible_keys_disposable = possible_keys[:]
+		for following_tag, prob in bigram_probs[key].items():
+			possible_keys_disposable.remove(following_tag)
+		for possible_left in possible_keys_disposable:
+			bigram_probs[key][possible_left] = 0
+	return bigram_probs
 
 if __name__ == '__main__':
 	train_path = "nlp_project2_uncertainty\\nlp_project2_uncertainty\\train"
@@ -361,9 +373,10 @@ if __name__ == '__main__':
 	BIO_unigram_probs = calc_unigram_probs(BIO_unigram_counts, vocab_size)
 	BIO_bigram_counts = calc_bigram_counts(all_BIO_list)
 	BIO_bigram_probs = calc_bigram_probs(BIO_bigram_counts, all_BIO_list)
+	BIO_bigram_probs = add_zeroes_to_bigram_prob(BIO_bigram_probs)
 
-	run_viterbi(public_path, BIO_bigram_probs, bio_probs)
-	#print(BIO_bigram_probs)
+	#run_viterbi(public_path, BIO_bigram_probs, bio_probs)
+	print(BIO_bigram_probs)
 
 	#for key in BIO_bigram_probs:
 	#	_sum = 0

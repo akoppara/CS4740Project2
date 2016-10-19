@@ -220,12 +220,80 @@ def calc_probs_word_tags(bio_counts):
 		bios["O"] = bios["O"] / float(tag_sum)
 	return bio_probs
 
+def bio_array_from_words (all_words_list_BIO):
+	all_BIO_list = []
+	for line in all_words_list_BIO:
+		if (len(line) == 3):
+			all_BIO_list.append(line[2])
+	return all_BIO_list
+
+def calc_unigram_counts (token_array):
+	vocab_size = 0
+	unigram_count = {}
+	for key in token_array:
+		unigram_count[key] = 0
+		vocab_size += 1
+	for key in token_array:
+		unigram_count[key] +=1
+	return (unigram_count, vocab_size)
+
+def calc_unigram_probs (unigram_count, vocab_size):
+	unigram_probs = copy.deepcopy(unigram_count)
+	for key in unigram_probs:
+		unigram_probs[key] = unigram_probs[key] / vocab_size
+	return unigram_probs
+
+def calc_bigram_counts (token_array):
+    #dictonary to hold counts
+    d = {}
+    for i in range(len(token_array)):
+        #w_n
+        wordn = token_array[i]
+        if i == 0:
+            wordn1 = "O"
+        else:
+            wordn1 = token_array[i-1]
+
+        if wordn1 in d:
+            wd = d[wordn1]
+            if wordn in wd:
+                wd[wordn] += 1
+            else:
+                wd[wordn] = 1
+        else:
+            wd = {}
+            wd[wordn] = 1
+            d[wordn1] = wd
+
+    return d
+
+def calc_bigram_probs (bigram_counts, token_array):
+    # need unigram counts for division later
+    unigram_counts, vocab_size = calc_unigram_counts(token_array)
+    # copy of bigram_counts dictionary
+    bigram_probs = copy.deepcopy(bigram_counts)
+    # first for loop goes through outer layer of bigram counts
+    for key, value in bigram_counts.items():
+        # second for loop goes through the inner layer of each outer layer
+        for following_word, word_count in value.items():
+            bigram_prob = float(word_count) / float(unigram_counts[key])
+            bigram_probs[key][following_word] = bigram_prob
+    return bigram_probs
 
 if __name__ == '__main__':
 	all_words_list = grab_files()
 	lexicon, lexicon_keys = build_lexicon(all_words_list)
 	all_words_list_BIO = cue_to_bio_training(all_words_list)
+	
 	bio_counts = count_word_tag_pairs(all_words_list_BIO)
 	bio_probs = calc_probs_word_tags(bio_counts)
+
+	all_BIO_list = bio_array_from_words(all_words_list_BIO)
+	BIO_unigram_counts, vocab_size = calc_unigram_counts(all_BIO_list)
+	BIO_unigram_probs = calc_unigram_probs(BIO_unigram_counts, vocab_size)
+	BIO_bigram_counts = calc_bigram_counts(all_BIO_list)
+	BIO_bigram_probs = calc_bigram_probs(BIO_bigram_counts, all_BIO_list)
+
+
 	# uncertain_phrase_detection(lexicon_keys)
 	# uncertain_sentence_detection(lexicon_keys)

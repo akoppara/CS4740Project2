@@ -1,6 +1,7 @@
 #Project 2
 import os
 import csv
+import copy
 
 def read_file (path, file):
 	file_words = []
@@ -193,10 +194,38 @@ def cue_to_bio_training (all_words_list):
 				line[2] = "B"
 	return all_words_list
 
+def count_word_tag_pairs(all_words_list_BIO):
+	counts = {}
+	for line in all_words_list_BIO:
+		if len(line) > 1:
+			word = line[0]
+			tag = line[2]
+			if word not in counts:
+				#First timer here
+				bio = {"B" : 0, "I" : 0, "O" : 0}
+				counts[word] = bio
+			counts[word][tag] += 1
+	return counts
+
+def calc_probs_word_tags(bio_counts):
+	bio_probs = copy.deepcopy(bio_counts)
+	for word, bios in bio_probs.items():
+		tag_sum = bios["B"] + bios["I"] + bios["O"]
+		#Calc probs
+		#B
+		bios["B"] = bios["B"] / float(tag_sum)
+		#I
+		bios["I"] = bios["I"] / float(tag_sum)
+		#O
+		bios["O"] = bios["O"] / float(tag_sum)
+	return bio_probs
+
+
 if __name__ == '__main__':
 	all_words_list = grab_files()
 	lexicon, lexicon_keys = build_lexicon(all_words_list)
 	all_words_list_BIO = cue_to_bio_training(all_words_list)
-
+	bio_counts = count_word_tag_pairs(all_words_list_BIO)
+	bio_probs = calc_probs_word_tags(bio_counts)
 	# uncertain_phrase_detection(lexicon_keys)
 	# uncertain_sentence_detection(lexicon_keys)

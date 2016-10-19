@@ -13,9 +13,6 @@ def read_file (path, file):
 	file_array = file_string.split('\n')
 	for each in file_array:
 		line_array = each.split('\t')
-		if (len(line_array) == 1):
-			line_array.append(SOS_TAG)
-			line_array.append(SOS_TAG)
 		file_words.append(line_array)
 	return(file_words)
 
@@ -23,7 +20,6 @@ def grab_files (path):
 	all_words_list = []
 	for file in os.listdir(path):
 		all_words_list += read_file(path, file)
-		#print(all_words_list)
 	return (all_words_list)
 
 def build_lexicon (all_words_list):
@@ -202,32 +198,6 @@ def cue_to_bio_training (all_words_list):
 			line.append(SOS_TAG)
 	return all_words_list
 
-def count_word_tag_pairs(all_words_list_BIO):
-	counts = {}
-	for line in all_words_list_BIO:
-		if len(line) > 1:
-			word = line[0]
-			tag = line[2]
-			if word not in counts:
-				#First timer here
-				bio = {"B" : 0, "I" : 0, "O" : 0}
-				counts[word] = bio
-			counts[word][tag] += 1
-	return counts
-
-def calc_probs_word_tags(bio_counts):
-	bio_probs = copy.deepcopy(bio_counts)
-	for word, bios in bio_probs.items():
-		tag_sum = bios["B"] + bios["I"] + bios["O"]
-		#Calc probs
-		#B
-		bios["B"] = bios["B"] / float(tag_sum)
-		#I
-		bios["I"] = bios["I"] / float(tag_sum)
-		#O
-		bios["O"] = bios["O"] / float(tag_sum)
-	return bio_probs
-
 def bio_array_from_words (all_words_list_BIO):
 	all_BIO_list = []
 	for line in all_words_list_BIO:
@@ -296,17 +266,13 @@ if __name__ == '__main__':
 	all_words_list = grab_files(train_path)
 	lexicon, lexicon_keys = build_lexicon(all_words_list)
 	all_words_list_BIO = cue_to_bio_training(all_words_list)
-	
-	bio_counts = count_word_tag_pairs(all_words_list_BIO)
-	bio_probs = calc_probs_word_tags(bio_counts)
-
 	all_BIO_list = bio_array_from_words(all_words_list_BIO)
 	BIO_unigram_counts, vocab_size = calc_unigram_counts(all_BIO_list)
 	BIO_unigram_probs = calc_unigram_probs(BIO_unigram_counts, vocab_size)
 	BIO_bigram_counts = calc_bigram_counts(all_BIO_list)
 	BIO_bigram_probs = calc_bigram_probs(BIO_bigram_counts, all_BIO_list)
 
-	print(BIO_bigram_probs)
+	#print(BIO_bigram_probs)
 
 	#for key in BIO_bigram_probs:
 	#	_sum = 0

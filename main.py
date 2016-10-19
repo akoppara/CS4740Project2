@@ -3,6 +3,8 @@ import os
 import csv
 import copy
 
+SOS_TAG = "<s>"
+
 def read_file (path, file):
 	file_words = []
 	file_path = path + '\\' + file
@@ -14,9 +16,8 @@ def read_file (path, file):
 		file_words.append(line_array)
 	return(file_words)
 
-def grab_files ():
+def grab_files (path):
 	all_words_list = []
-	path = "nlp_project2_uncertainty\\nlp_project2_uncertainty\\train"
 	for file in os.listdir(path):
 		all_words_list += read_file(path, file)
 	return (all_words_list)
@@ -192,6 +193,9 @@ def cue_to_bio_training (all_words_list):
 			elif (prev_tagged) and not (line[2] in prev_cue):
 				prev_cue = line[2]
 				line[2] = "B"
+		else:
+			line.append(SOS_TAG)
+			line.append(SOS_TAG)
 	return all_words_list
 
 def bio_array_from_words (all_words_list_BIO):
@@ -255,7 +259,11 @@ def calc_bigram_probs (bigram_counts, token_array):
     return bigram_probs
 
 if __name__ == '__main__':
-	all_words_list = grab_files()
+	train_path = "nlp_project2_uncertainty\\nlp_project2_uncertainty\\train"
+	public_path = "nlp_project2_uncertainty\\nlp_project2_uncertainty\\test-public"
+	private_path = "nlp_project2_uncertainty\\nlp_project2_uncertainty\\test-private"
+
+	all_words_list = grab_files(train_path)
 	lexicon, lexicon_keys = build_lexicon(all_words_list)
 	all_words_list_BIO = cue_to_bio_training(all_words_list)
 	all_BIO_list = bio_array_from_words(all_words_list_BIO)
@@ -263,6 +271,16 @@ if __name__ == '__main__':
 	BIO_unigram_probs = calc_unigram_probs(BIO_unigram_counts, vocab_size)
 	BIO_bigram_counts = calc_bigram_counts(all_BIO_list)
 	BIO_bigram_probs = calc_bigram_probs(BIO_bigram_counts, all_BIO_list)
+
+	#print(BIO_bigram_probs)
+
+	#for key in BIO_bigram_probs:
+	#	_sum = 0
+	#	for _key, value in BIO_bigram_probs[key].items():
+	#		_sum += value
+	#	print(_sum)
+
+	#grab_files(public_path)
 
 
 	# uncertain_phrase_detection(lexicon_keys)

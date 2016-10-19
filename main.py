@@ -13,6 +13,9 @@ def read_file (path, file):
 	file_array = file_string.split('\n')
 	for each in file_array:
 		line_array = each.split('\t')
+		if (len(line_array) == 1):
+			line_array.append(SOS_TAG)
+			line_array.append(SOS_TAG)
 		file_words.append(line_array)
 	return(file_words)
 
@@ -20,6 +23,7 @@ def grab_files (path):
 	all_words_list = []
 	for file in os.listdir(path):
 		all_words_list += read_file(path, file)
+		#print(all_words_list)
 	return (all_words_list)
 
 def build_lexicon (all_words_list):
@@ -302,7 +306,7 @@ if __name__ == '__main__':
 	BIO_bigram_counts = calc_bigram_counts(all_BIO_list)
 	BIO_bigram_probs = calc_bigram_probs(BIO_bigram_counts, all_BIO_list)
 
-	#print(BIO_bigram_probs)
+	print(BIO_bigram_probs)
 
 	#for key in BIO_bigram_probs:
 	#	_sum = 0

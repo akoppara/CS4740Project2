@@ -359,14 +359,16 @@ def add_zeroes_to_bigram_prob (bigram_probs):
 	return bigram_probs
 
 def contains_BI (BIO_sentence):
-	if ('B' in BIO_sentence) or ('I' in BIO_sentence):
-		return True
-	else:
-		return False
+	for line in BIO_sentence:
+		if (len(line) > 1): 
+			if ('B' in line[2]) or ('I' in line[2]):
+				return True
+	return False
 
 def BI_multiplier (BIO_sentence, multiplier):
 	multiplied_sentence = []
-	if ('B' in BIO_sentence) or ('I' in BIO_sentence):
+	BI = contains_BI(BIO_sentence)
+	if BI:
 		for x in range(multiplier):
 			multiplied_sentence.extend(BIO_sentence)
 	else:
@@ -374,15 +376,20 @@ def BI_multiplier (BIO_sentence, multiplier):
 	return multiplied_sentence
 
 
-def downsample_BIO_tags (all_BIO_list):
+def downsample_BIO_tags (all_words_list_BIO):
 	downsample_sentence = []
-	BIO_list = all_BIO_list
+	BIO_list = all_words_list_BIO
 	index_of_SOS_tag = 0
 	slice_index = 0
 	while (index_of_SOS_tag > -1):
 		try:
-			index_of_SOS_tag = BIO_list.index(SOS_TAG)
-			if (SOS_TAG in BIO_list[index_of_SOS_tag + 1]):
+			index_of_SOS_tag = 0
+			for line in BIO_list:
+				if SOS_TAG in line[2]:
+					break
+				else:
+					index_of_SOS_tag += 1
+			if SOS_TAG in BIO_list[index_of_SOS_tag + 1][2]:
 				slice_index = index_of_SOS_tag + 2
 			else:
 				slice_index = index_of_SOS_tag + 1
@@ -393,17 +400,24 @@ def downsample_BIO_tags (all_BIO_list):
 			BIO_list = BIO_list[slice_index:]
 		except:
 			index_of_SOS_tag = -1
+	#for line in downsample_sentence:
+	#	print(line)
 	return downsample_sentence
 
-def upsample_BIO_tags (all_BIO_list, multiplier):
+def upsample_BIO_tags (all_words_list_BIO, multiplier):
 	upsample_sentence = []
-	BIO_list = all_BIO_list
+	BIO_list = all_words_list_BIO
 	index_of_SOS_tag = 0
 	slice_index = 0
 	while (index_of_SOS_tag > -1):
 		try:
-			index_of_SOS_tag = BIO_list.index(SOS_TAG)
-			if (SOS_TAG in BIO_list[index_of_SOS_tag + 1]):
+			index_of_SOS_tag = 0
+			for line in BIO_list:
+				if SOS_TAG in line[2]:
+					break
+				else:
+					index_of_SOS_tag += 1
+			if SOS_TAG in BIO_list[index_of_SOS_tag + 1][2]:
 				slice_index = index_of_SOS_tag + 2
 			else:
 				slice_index = index_of_SOS_tag + 1
@@ -427,15 +441,15 @@ if __name__ == '__main__':
 	bio_probs = calc_probs_word_tags(bio_counts)
 	all_BIO_list = bio_array_from_words(all_words_list_BIO)
 
-	downsample_BIO_list = downsample_BIO_tags(all_BIO_list)
-	multiplier = 10
-	upsample_BIO_list = upsample_BIO_tags(all_BIO_list, multiplier)
+	#downsample_BIO_list = downsample_BIO_tags(all_words_list_BIO)
+	multiplier = 2
+	upsample_BIO_list = upsample_BIO_tags(all_words_list_BIO, multiplier)
 
 	#print(downsample_BIO_list)
 	#print(upsample_BIO_list)
 
-	all_BIO_list = downsample_BIO_list
-	all_BIO_list = upsample_BIO_list
+	#all_BIO_list = downsample_BIO_list
+	#all_BIO_list = upsample_BIO_list
 
 	#print(upsample_BIO_list)
 	#print(all_BIO_list)
@@ -445,7 +459,7 @@ if __name__ == '__main__':
 	BIO_bigram_probs = calc_bigram_probs(BIO_bigram_counts, all_BIO_list)
 	BIO_bigram_probs = add_zeroes_to_bigram_prob(BIO_bigram_probs)
 
-	run_viterbi(public_path, BIO_bigram_probs, bio_probs)
+	#run_viterbi(public_path, BIO_bigram_probs, bio_probs)
 	#print(BIO_bigram_probs)
 
 	#for key in BIO_bigram_probs:

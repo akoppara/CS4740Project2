@@ -299,22 +299,31 @@ def viterbi(bio_bigram_probs, bio_probs, words):
 		try:
 			bio_prob = bio_probs[words[0]][tags[i]]
 		except KeyError:
-			bio_prob = 0
-		score[i] = {0 : (PROB_PRIOR * bio_prob)}
+			bio_prob = 0.5
+		score[i] = {0 : (bio_bigram_probs[SOS_TAG][tags[i]] * bio_prob)}
 		bptr[i] = {0 : 0}
+	# print("AFTER INIT:")
+	# print(score)
+	# print(bptr)
 	#Iteration
 	for t in range(1,len(words)):
+		# print(words[t])
 		for i in range(c):
 			values = []
+			# print(score)
 			for j in range(c):
+				# print(bio_bigram_probs[tags[j]][tags[i]])
 				values.append(score[j][(t-1)] * bio_bigram_probs[tags[j]][tags[i]])
 			idx, value = max(enumerate(values), key=operator.itemgetter(1))
+			# print("VALUE: " + str(value))
 			try:
 				word_bio_prob = bio_probs[words[t]][tags[i]]
 			except KeyError:
-				word_bio_prob = 0
+				word_bio_prob = 0.333
+			# print(word_bio_prob)
 			score[i][t] = value * word_bio_prob
 			bptr[i][t] = idx
+			# print(score)
 	#Identify
 	T = {}
 	n = len(words)
@@ -328,22 +337,134 @@ def viterbi(bio_bigram_probs, bio_probs, words):
 	T[n-1] = max_i
 	for i in reversed(range(0, n-1)):
 		T[i] = bptr[T[i+1]][i+1]
-	print(T)
+	return T
 
-def run_viterbi(path, bigram_probs, bio_probs):
+def run_viterbi(path, bigram_probs, bio_probs, kaggle2):
 	all_words_list = grab_files(path)
-	print(bigram_probs)
 	words = []
 	for line in all_words_list:
 		words.append(line[0])
 	#For testing, get first sentence only
+	sentences = []
 	sentence = []
 	for w in words:
 		if w == '':
-			break
+			sentences.append(sentence)
+			sentence = []
 		else:
 			sentence.append(w)
-	viterbi(bigram_probs, bio_probs, sentence)
+	result = []
+	tags = ["B", "I", "O"]
+	uncertain_sentences = []
+	s_index = 0
+	for s in sentences:
+		added = False
+		if len(s) > 0:
+			T = viterbi(bigram_probs, bio_probs, s)
+			for word_idx, tag_idx in T.items():
+				if tag_idx == 0 and not added:
+					added = True
+					uncertain_sentences.append(s_index)
+				tag_pair = [s[word_idx], tags[tag_idx]]
+				result.append(tag_pair)
+			s_index += 1
+	if kaggle2:
+		return result, uncertain_sentences
+	else:
+		return result
+
+def kaggle1_str(tagged_words, public):
+	#tagged_words is an array where each element is of the form:
+	#[word, tag] where tag is either B, I, O
+	ranges = []
+	prev_tagged = False
+	curr_range = []
+	was_B = False
+	for i, pair in enumerate(tagged_words):
+		if pair[1] == "O":
+			if prev_tagged:
+				#close it off
+				if was_B:
+					ranges.append(curr_range)
+					curr_range = []
+				else:
+					curr_range.append(i-1)
+					ranges.append(curr_range)
+					curr_range = []
+			prev_tagged = False
+			was_B = False
+		elif pair[1] == "B":
+			#Start of a cue span
+			if prev_tagged:
+				#Previous was a B tag, this is a new cue
+				if was_B:
+					ranges.append(curr_range)
+					curr_range = []
+				else:
+					curr_range.append(i-1)
+					ranges.append(curr_range)
+					curr_range = []
+			else:
+				prev_tagged = True
+			was_B = True
+			curr_range.append(i)
+		elif pair[1] == "I":
+			was_B = False
+		else:
+			#TODO: REMOVE
+			raise ValueError('how the fuck did you do this')
+	#ranges now hold the index ranges for the kaggle 1 submission
+	#[[1,2], [4], [13, 15]]
+	result_string = ""
+	for r in ranges:
+		if len(r) == 1:
+			add = str(r[0]) + "-" + str(r[0])
+		else:
+			#2 numbers
+			add = str(r[0]) + "-" + str(r[1])
+		result_string += add + " "
+
+	return result_string
+
+def kaggle1_csv(bio_bigram_probs, bio_probs):
+
+	public_path = "nlp_project2_uncertainty\\nlp_project2_uncertainty\\test-public"
+	private_path = "nlp_project2_uncertainty\\nlp_project2_uncertainty\\test-private"
+
+	public_tags = run_viterbi(public_path, bio_bigram_probs, bio_probs, False)
+	private_tags = run_viterbi(private_path, bio_bigram_probs, bio_probs, False)
+
+	public_string = kaggle1_str(public_tags, True)
+	private_string = kaggle1_str(private_tags, False)
+
+	with open('kaggle1-hmm.csv', 'w', newline='') as csvfile:
+		csvwriter = csv.writer(csvfile, delimiter=',', quotechar=' ', quoting=csv.QUOTE_MINIMAL)
+		csvwriter.writerow(['Type', 'Spans'])
+		csvwriter.writerow(['CUE-public', public_string])
+		csvwriter.writerow(['CUE-private', private_string])
+
+def kaggle2_str(ranges):
+	result_string = ""
+	for i in ranges:
+		result_string += str(i) + " "
+	return result_string
+
+def kaggle2_csv(bio_bigram_probs, bio_probs):
+
+	public_path = "nlp_project2_uncertainty\\nlp_project2_uncertainty\\test-public"
+	private_path = "nlp_project2_uncertainty\\nlp_project2_uncertainty\\test-private"
+
+	public_tags, public_ranges = run_viterbi(public_path, bio_bigram_probs, bio_probs, True)
+	private_tags, private_ranges = run_viterbi(private_path, bio_bigram_probs, bio_probs, True)
+
+	public_string = kaggle2_str(public_ranges)
+	private_string = kaggle2_str(private_ranges)
+
+	with open('kaggle2-hmm.csv', 'w', newline='') as csvfile:
+		csvwriter = csv.writer(csvfile, delimiter=',', quotechar=' ', quoting=csv.QUOTE_MINIMAL)
+		csvwriter.writerow(['Type', 'Indices'])
+		csvwriter.writerow(['SENTENCE-public', public_string])
+		csvwriter.writerow(['SENTENCE-private', private_string])
 
 def add_zeroes_to_bigram_prob (bigram_probs):
 	possible_keys = []
@@ -375,8 +496,27 @@ if __name__ == '__main__':
 	BIO_bigram_probs = calc_bigram_probs(BIO_bigram_counts, all_BIO_list)
 	BIO_bigram_probs = add_zeroes_to_bigram_prob(BIO_bigram_probs)
 
-	#run_viterbi(public_path, BIO_bigram_probs, bio_probs)
-	print(BIO_bigram_probs)
+	words = [
+		["A", "O"],
+		["B", "B"],
+		["C", "I"],
+		["D", "O"],
+		["E", "B"],
+		["F", "B"],
+		["G", "I"],
+		["H", "B"],
+		["I", "O"],
+		["J", "O"],
+		["K", "B"],
+		["L", "I"],
+		["M", "I"],
+		["N", "O"]
+	]
+
+
+	kaggle1_csv(BIO_bigram_probs, bio_probs)
+	kaggle2_csv(BIO_bigram_probs, bio_probs)
+	# print(BIO_bigram_probs)
 
 	#for key in BIO_bigram_probs:
 	#	_sum = 0

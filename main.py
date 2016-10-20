@@ -479,6 +479,63 @@ def add_zeroes_to_bigram_prob (bigram_probs):
 			bigram_probs[key][possible_left] = 0
 	return bigram_probs
 
+def contains_BI (BIO_sentence):
+	if ('B' in BIO_sentence) or ('I' in BIO_sentence):
+		return True
+	else:
+		return False
+
+def BI_multiplier (BIO_sentence, multiplier):
+	multiplied_sentence = []
+	if ('B' in BIO_sentence) or ('I' in BIO_sentence):
+		for x in range(multiplier):
+			multiplied_sentence.extend(BIO_sentence)
+	else:
+		multiplied_sentence.extend(BIO_sentence)
+	return multiplied_sentence
+
+
+def downsample_BIO_tags (all_BIO_list):
+	downsample_sentence = []
+	BIO_list = all_BIO_list
+	index_of_SOS_tag = 0
+	slice_index = 0
+	while (index_of_SOS_tag > -1):
+		try:
+			index_of_SOS_tag = BIO_list.index(SOS_TAG)
+			if (SOS_TAG in BIO_list[index_of_SOS_tag + 1]):
+				slice_index = index_of_SOS_tag + 2
+			else:
+				slice_index = index_of_SOS_tag + 1
+			sentence = BIO_list[0: slice_index]
+			is_BI = contains_BI(sentence)
+			if is_BI:
+				downsample_sentence.extend(sentence)
+			BIO_list = BIO_list[slice_index:]
+		except:
+			index_of_SOS_tag = -1
+	return downsample_sentence
+
+def upsample_BIO_tags (all_BIO_list, multiplier):
+	upsample_sentence = []
+	BIO_list = all_BIO_list
+	index_of_SOS_tag = 0
+	slice_index = 0
+	while (index_of_SOS_tag > -1):
+		try:
+			index_of_SOS_tag = BIO_list.index(SOS_TAG)
+			if (SOS_TAG in BIO_list[index_of_SOS_tag + 1]):
+				slice_index = index_of_SOS_tag + 2
+			else:
+				slice_index = index_of_SOS_tag + 1
+			sentence = BIO_list[0:slice_index]
+			sentence = BI_multiplier(sentence, multiplier)
+			upsample_sentence.extend(sentence)
+			BIO_list = BIO_list[slice_index:]
+		except:
+			index_of_SOS_tag = -1
+	return upsample_sentence
+
 if __name__ == '__main__':
 	train_path = "nlp_project2_uncertainty\\nlp_project2_uncertainty\\train"
 	public_path = "nlp_project2_uncertainty\\nlp_project2_uncertainty\\test-public"
@@ -490,6 +547,19 @@ if __name__ == '__main__':
 	bio_counts = count_word_tag_pairs(all_words_list_BIO)
 	bio_probs = calc_probs_word_tags(bio_counts)
 	all_BIO_list = bio_array_from_words(all_words_list_BIO)
+
+	downsample_BIO_list = downsample_BIO_tags(all_BIO_list)
+	multiplier = 10
+	upsample_BIO_list = upsample_BIO_tags(all_BIO_list, multiplier)
+
+	#print(downsample_BIO_list)
+	#print(upsample_BIO_list)
+
+	all_BIO_list = downsample_BIO_list
+	all_BIO_list = upsample_BIO_list
+
+	#print(upsample_BIO_list)
+	#print(all_BIO_list)
 	BIO_unigram_counts, vocab_size = calc_unigram_counts(all_BIO_list)
 	BIO_unigram_probs = calc_unigram_probs(BIO_unigram_counts, vocab_size)
 	BIO_bigram_counts = calc_bigram_counts(all_BIO_list)
@@ -517,6 +587,8 @@ if __name__ == '__main__':
 	kaggle1_csv(BIO_bigram_probs, bio_probs)
 	kaggle2_csv(BIO_bigram_probs, bio_probs)
 	# print(BIO_bigram_probs)
+	run_viterbi(public_path, BIO_bigram_probs, bio_probs)
+	#print(BIO_bigram_probs)
 
 	#for key in BIO_bigram_probs:
 	#	_sum = 0
